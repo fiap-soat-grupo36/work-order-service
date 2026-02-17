@@ -1,0 +1,84 @@
+name: Feature Branch - CI & Terraform Validation
+
+on:
+  push:
+    branches: [feature/*]
+
+jobs:
+  # 1. Build, Lint e Testes Unitários
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+      
+      - name: Lint (Checkstyle)
+        run: mvn checkstyle:check
+        continue-on-error: false
+      
+      - name: Build and Unit Tests
+        run: mvn clean test
+      
+      - name: Build Package
+        run: mvn package -DskipTests
+
+  # 2. Terraform Validate e Plan
+  terraform-validation:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+      
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+      
+      - name: Terraform Init
+        run: terraform init -backend=false
+      
+      - name: Terraform Validate
+        run: terraform validate
+      
+      - name: Terraform Plan (Dev Workspace)
+        run: |
+          terraform workspace select dev || terraform workspace new dev
+          terraform plan -var-file=environments/dev.tfvars -out=tfplan
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_KEY }}
+
+  # 3. Criar PR Automático para Develop
+  create-pr:
+    needs: [build-and-test, terraform-validation]
+    uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-create-pr.yml@main
+    with:
+      base: develop
+      title: "✨ Feature: ${{ github.event.head_commit.message }}"
+      body: |
+        ## 🚀 Feature Ready for Review
+        
+        **Branch:** `${{ github.ref_name }}`
+        **Commit:** `${{ github.sha }}`
+        **Author:** @${{ github.actor }}
+        
+        ### ✅ CI Status
+        - ✅ Lint passed
+        - ✅ Unit tests passed
+        - ✅ Build successful
+        - ✅ Terraform validate passed
+        - ✅ Terraform plan successful (dev)
+        
+        Ready for code review and merge to develop!
+      labels: '["feature", "auto-pr", "ci-passed"]'
+      reviewers: '["tech-lead"]'

@@ -1,0 +1,113 @@
+name: Develop - CI/CD & Deploy to Dev
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  # 1. Build, Lint e Testes Unitários
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+      
+      - name: Lint (Checkstyle)
+        run: mvn checkstyle:check
+      
+      - name: Build and Test with Coverage
+        run: mvn clean verify
+      
+      - name: Upload JaCoCo Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-reports
+          path: '**/target/site/jacoco/jacoco.xml'
+
+  # 2. SonarCloud - Cobertura de Testes
+  sonar:
+    needs: build-and-test
+    uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-sonar-java.yml@main
+    with:
+      java_version: '21'
+      sonar_org: 'fiap-soat-grupo36'
+      sonar_project_key: 'customer-service'
+      maven_skip_tests: true
+      download_jacoco_artifacts: true
+    secrets:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # 3. Docker Build & Push
+  docker:
+    needs: [build-and-test, sonar]
+    uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-dockerhub.yml@main
+    with:
+      modules: '["customer-service"]'
+      registry_namespace: 'fiapsoatgrupo36'
+      tag_strategy: 'both'
+      push_images: true
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  # 4. Deploy to Dev Environment
+  deploy-dev:
+    needs: docker
+    uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-terraform.yml@main
+    with:
+      workspace: dev
+      environment: dev
+      working_directory: ./infra
+      auto_apply: true
+      tfvars_file: 'environments/dev.tfvars'
+      terraform_vars: |
+        {
+          "image_tag": "${{ github.ref_name }}-${{ github.sha }}",
+          "replicas": 1,
+          "environment": "dev"
+        }
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_KEY }}
+
+  # 5. Criar PR Automático para Main (Produção)
+  create-pr-to-main:
+    needs: deploy-dev
+    uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-create-pr.yml@main
+    with:
+      base: main
+      head: develop
+      title: "🚀 Deploy to Production - ${{ github.sha }}"
+      body: |
+        ## 🎯 Ready for Production Deployment
+        
+        **Environment:** Development → Production
+        **Commit:** `${{ github.sha }}`
+        **Deployed to Dev:** ✅ Successful
+        
+        ### ✅ CI/CD Status
+        - ✅ Lint passed
+        - ✅ Unit tests passed
+        - ✅ Code coverage analyzed
+        - ✅ SonarCloud quality gate passed
+        - ✅ Docker image published
+        - ✅ Deployed successfully to DEV
+        
+        ### 📦 Docker Image
+        - **Image:** `fiapsoatgrupo36/customer-service:develop-${{ github.sha }}`
+        
+        ### 🔍 Review Checklist
+        - [ ] All features tested in DEV
+        - [ ] No critical bugs reported
+        - [ ] Performance validated
+        - [ ] Security review completed
+        
+        Ready for production deployment! 🚀
+      labels: '["deployment", "production", "needs-approval"]'
+      reviewers: '["tech-lead", "devops-lead"]'
+      draft: false
