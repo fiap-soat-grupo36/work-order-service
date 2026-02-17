@@ -39,6 +39,17 @@
         </dependencies>
     </dependencyManagement>
 
+    <repositories>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages - Shared Library</name>
+            <url>https://maven.pkg.github.com/fiap-soat-grupo36/shared-library</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>br.com.fiap.oficina</groupId>
