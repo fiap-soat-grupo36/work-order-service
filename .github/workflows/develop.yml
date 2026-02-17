@@ -7,27 +7,18 @@ on:
 jobs:
   # 1. Build, Lint e Testes Unitários
   build-and-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
-      
-      - name: Lint (Checkstyle)
-        run: mvn checkstyle:check
-      
-      - name: Build and Test with Coverage
-        run: mvn clean verify
-      
-      - name: Upload JaCoCo Reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-reports
-          path: '**/target/site/jacoco/jacoco.xml'
+    permissions:
+      contents: read
+      packages: read
+    uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-java-ci.yml@main
+    with:
+      java_version: '21'
+      skip_checkstyle: true
+      build_command: 'mvn -B -ntp -U clean verify'
+      upload_jacoco_reports: true
+      jacoco_artifact_name: 'jacoco-reports-${{ github.run_id }}'
+      jacoco_report_path: '**/target/site/jacoco/jacoco.xml'
+    secrets: inherit
 
   # 2. SonarCloud - Cobertura de Testes
   sonar:
@@ -36,7 +27,7 @@ jobs:
     with:
       java_version: '21'
       sonar_org: 'fiap-soat-grupo36'
-      sonar_project_key: 'customer-service'
+      sonar_project_key: 'work-order-service'
       maven_skip_tests: true
       download_jacoco_artifacts: true
     secrets:
@@ -47,7 +38,7 @@ jobs:
     needs: [build-and-test, sonar]
     uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-dockerhub.yml@main
     with:
-      modules: '["customer-service"]'
+      modules: '["work-order-service"]'
       registry_namespace: 'fiapsoatgrupo36'
       tag_strategy: 'both'
       push_images: true
@@ -99,7 +90,7 @@ jobs:
         - ✅ Deployed successfully to DEV
         
         ### 📦 Docker Image
-        - **Image:** `fiapsoatgrupo36/customer-service:develop-${{ github.sha }}`
+        - **Image:** `fiapsoatgrupo36/work-order-service:develop-${{ github.sha }}`
         
         ### 🔍 Review Checklist
         - [ ] All features tested in DEV
@@ -109,5 +100,5 @@ jobs:
         
         Ready for production deployment! 🚀
       labels: '["deployment", "production", "needs-approval"]'
-      reviewers: '["tech-lead", "devops-lead"]'
+      reviewers: ''
       draft: false

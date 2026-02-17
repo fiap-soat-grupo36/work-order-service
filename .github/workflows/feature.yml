@@ -7,25 +7,17 @@ on:
 jobs:
   # 1. Build, Lint e Testes Unitários
   build-and-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
-      
-      - name: Lint (Checkstyle)
-        run: mvn checkstyle:check
-        continue-on-error: false
-      
-      - name: Build and Unit Tests
-        run: mvn clean test
-      
-      - name: Build Package
-        run: mvn package -DskipTests
+    permissions:
+      contents: read
+      packages: read
+    uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-java-ci.yml@main
+    with:
+      java_version: '21'
+      skip_checkstyle: true
+      build_command: 'mvn -B -ntp -U clean test'
+      package_command: 'mvn -B -ntp -U package -DskipTests'
+      upload_jacoco_reports: false
+    secrets: inherit
 
   # 2. Terraform Validate e Plan
   terraform-validation:
