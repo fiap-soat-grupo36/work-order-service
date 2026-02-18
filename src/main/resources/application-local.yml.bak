@@ -4,14 +4,6 @@ spring:
     mongodb:
       uri: mongodb+srv://workorder_user:W0rk0rd3r_2026_@oficina-workorder.mia8qk5.mongodb.net/workorder_db
 
-# URLs dos serviços para Feign (sem Eureka)
-customer-service:
-  url: http://localhost:8081
-
-catalog-service:
-  url: http://localhost:8083
-
-# Desabilita Eureka no local
 eureka:
   client:
     enabled: false

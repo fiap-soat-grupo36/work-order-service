@@ -39,6 +39,7 @@ jobs:
     uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-dockerhub.yml@main
     with:
       modules: '["work-order-service"]'
+      dockerfile_pattern: './Dockerfile'
       registry_namespace: 'fiapsoatgrupo36'
       tag_strategy: 'both'
       push_images: true
