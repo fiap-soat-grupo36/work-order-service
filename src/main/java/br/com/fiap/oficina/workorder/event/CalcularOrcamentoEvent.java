@@ -6,9 +6,9 @@ import org.springframework.context.ApplicationEvent;
 @Getter
 public class CalcularOrcamentoEvent extends ApplicationEvent {
 
-    private final Long ordemServicoId;
+    private final String ordemServicoId;
 
-    public CalcularOrcamentoEvent(Object source, Long ordemServicoId) {
+    public CalcularOrcamentoEvent(Object source, String ordemServicoId) {
         super(source);
         this.ordemServicoId = ordemServicoId;
     }
