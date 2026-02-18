@@ -21,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -42,12 +41,13 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
-    @Transactional
     public OrdemServicoResponseDTO criar(OsRequestDTO request) {
         log.info("Criando ordem de serviço para cliente ID: {} e veículo ID: {}",
                 request.getClienteId(), request.getVeiculoId());
 
-        // Valida cliente e veículo
+        // TEMPORÁRIO: Comentado para testar sem outros serviços rodando
+        // Descomentar quando testar no ambiente K8s com customer-service disponível
+        /*
         ClienteResponseDTO cliente = clienteClient.getCliente(request.getClienteId());
         VeiculoResponseDTO veiculo = veiculoClient.getVeiculo(request.getVeiculoId());
 
@@ -57,8 +57,8 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
         if (veiculo == null) {
             throw new RecursoNaoEncontradoException("Veículo não encontrado");
         }
+        */
 
-        // Cria ordem de serviço
         OrdemServico os = new OrdemServico();
         os.setClienteId(request.getClienteId());
         os.setVeiculoId(request.getVeiculoId());
@@ -66,20 +66,24 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
         os.setStatus(StatusOrdemServico.RECEBIDA);
         os.setDataCriacao(LocalDateTime.now());
 
-        // Adiciona serviços
         if (request.getServicosIds() != null && !request.getServicosIds().isEmpty()) {
+            // TEMPORÁRIO: Comentado para testar sem catalog-service
+            /*
             for (Long servicoId : request.getServicosIds()) {
                 ServicoResponseDTO servico = servicoClient.getServico(servicoId);
                 if (servico != null && servico.getAtivo()) {
                     os.addServico(servicoId);
                 }
             }
+            */
+            // Adiciona diretamente sem validar
+            for (Long servicoId : request.getServicosIds()) {
+                os.addServico(servicoId);
+            }
         }
 
-        // Salva a ordem
         os = repository.save(os);
 
-        // Adiciona produtos
         if (request.getProdutos() != null && !request.getProdutos().isEmpty()) {
             for (ItemOrdemServicoDTO produtoDTO : request.getProdutos()) {
                 ItemOrdemServico item = new ItemOrdemServico();
@@ -91,14 +95,13 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
             os = repository.save(os);
         }
 
-        // Publica evento para calcular orçamento
-        eventPublisher.publishEvent(new CalcularOrcamentoEvent(this, os.getId()));
+        // TODO: Ajustar evento para usar String id quando budget-service suportar
+        // eventPublisher.publishEvent(new CalcularOrcamentoEvent(this, os.getId()));
 
         return toResponseDTO(os);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<OrdemServicoResponseDTO> listarTodos(List<StatusOrdemServico> status) {
         List<OrdemServico> ordens;
         if (status != null && !status.isEmpty()) {
@@ -112,28 +115,24 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public OrdemServicoResponseDTO buscarPorId(Long id) {
+    public OrdemServicoResponseDTO buscarPorId(String id) {
         OrdemServico os = getOrdemServico(id);
         return toResponseDTO(os);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<OrdemServicoResumoDTO> buscarPorCliente(Long clienteId) {
         List<OrdemServico> ordens = repository.findByClienteId(clienteId);
         return mapper.toResumoDTOList(ordens);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<OrdemServicoResumoDTO> buscarPorVeiculo(Long veiculoId) {
         List<OrdemServico> ordens = repository.findByVeiculoId(veiculoId);
         return mapper.toResumoDTOList(ordens);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<OrdemServicoResponseDTO> buscarPorMecanico(Long mecanicoId) {
         List<OrdemServico> ordens = repository.findByMecanicoId(mecanicoId);
         return ordens.stream()
@@ -142,7 +141,6 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<OrdemServicoResponseDTO> buscarAtualizadas() {
         List<OrdemServico> ordens = repository.findOrdensAtualizadas();
         return ordens.stream()
@@ -151,145 +149,102 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
     }
 
     @Override
-    @Transactional
-    public OrdemServicoResponseDTO atualizar(Long id, OsRequestDTO request) {
+    public OrdemServicoResponseDTO atualizar(String id, OsRequestDTO request) {
         OrdemServico os = getOrdemServico(id);
-
         if (request.getObservacoes() != null) {
             os.setObservacoes(request.getObservacoes());
         }
-
         os = repository.save(os);
         return toResponseDTO(os);
     }
 
     @Override
-    @Transactional
-    public void atualizarStatus(Long ordemServicoId, StatusOrdemServico status) {
+    public void atualizarStatus(String ordemServicoId, StatusOrdemServico status) {
         OrdemServico os = getOrdemServico(ordemServicoId);
         os.setStatus(status);
         repository.save(os);
     }
 
     @Override
-    @Transactional
-    public OrdemServicoResponseDTO atribuirMecanico(Long id, Long mecanicoId) {
+    public OrdemServicoResponseDTO atribuirMecanico(String id, Long mecanicoId) {
         log.info("Atribuindo mecânico ID: {} à ordem de serviço ID: {}", mecanicoId, id);
-
         OrdemServico os = getOrdemServico(id);
-
-        // Valida se o usuário tem role MECANICO
-        // Nota: Em produção, deve-se validar via Auth-Service
         os.setMecanicoId(mecanicoId);
         os = repository.save(os);
-
         return toResponseDTO(os);
     }
 
     @Override
-    @Transactional
-    public OrdemServicoResponseDTO diagnosticar(Long id, String observacoes) {
+    public OrdemServicoResponseDTO diagnosticar(String id, String observacoes) {
         log.info("Diagnosticando ordem de serviço ID: {}", id);
-
         OrdemServico os = getOrdemServico(id);
         os.setStatus(StatusOrdemServico.EM_DIAGNOSTICO);
-
         if (observacoes != null) {
             os.setObservacoes(observacoes);
         }
-
         os = repository.save(os);
-
-        // Publica evento para calcular orçamento
-        eventPublisher.publishEvent(new CalcularOrcamentoEvent(this, os.getId()));
-
+        // TODO: Ajustar evento para usar String id
+        // eventPublisher.publishEvent(new CalcularOrcamentoEvent(this, os.getId()));
         return toResponseDTO(os);
     }
 
     @Override
-    @Transactional
-    public OrdemServicoResponseDTO executar(Long id, String observacoes) {
+    public OrdemServicoResponseDTO executar(String id, String observacoes) {
         log.info("Iniciando execução da ordem de serviço ID: {}", id);
-
         OrdemServico os = getOrdemServico(id);
-
-        // Valida se ordem de serviço está aguardando aprovação (status correto após orçamento aprovado)
         if (os.getStatus() != StatusOrdemServico.AGUARDANDO_APROVACAO) {
             throw new BusinessException("Ordem de serviço deve estar aguardando aprovação para iniciar execução");
         }
-
         os.setStatus(StatusOrdemServico.EM_EXECUCAO);
         os.setDataInicioExecucao(LocalDateTime.now());
-
         if (observacoes != null) {
             os.setObservacoes(observacoes);
         }
-
         os = repository.save(os);
         return toResponseDTO(os);
     }
 
     @Override
-    @Transactional
-    public OrdemServicoResponseDTO finalizar(Long id, String observacoes) {
+    public OrdemServicoResponseDTO finalizar(String id, String observacoes) {
         log.info("Finalizando ordem de serviço ID: {}", id);
-
         OrdemServico os = getOrdemServico(id);
-
-        // Valida se está em execução
         if (os.getStatus() != StatusOrdemServico.EM_EXECUCAO) {
             throw new BusinessException("Ordem de serviço deve estar em execução para ser finalizada");
         }
-
         os.setStatus(StatusOrdemServico.FINALIZADA);
         os.setDataTerminoExecucao(LocalDateTime.now());
-
         if (observacoes != null) {
             os.setObservacoes(observacoes);
         }
-
         os = repository.save(os);
-
-        // Publica evento de veículo disponível
-        eventPublisher.publishEvent(new VeiculoDisponivelEvent(this, os.getId(), os.getVeiculoId()));
-
+        // TODO: Ajustar evento para usar String id
+        // eventPublisher.publishEvent(new VeiculoDisponivelEvent(this, os.getId(), os.getVeiculoId()));
         return toResponseDTO(os);
     }
 
     @Override
-    @Transactional
-    public OrdemServicoResponseDTO entregar(Long id, String observacoes) {
+    public OrdemServicoResponseDTO entregar(String id, String observacoes) {
         log.info("Entregando veículo da ordem de serviço ID: {}", id);
-
         OrdemServico os = getOrdemServico(id);
-
-        // Valida se está finalizada
         if (os.getStatus() != StatusOrdemServico.FINALIZADA) {
             throw new BusinessException("Ordem de serviço deve estar finalizada para ser entregue");
         }
-
         os.setStatus(StatusOrdemServico.ENTREGUE);
         os.setDataEntrega(LocalDateTime.now());
-
         if (observacoes != null) {
             os.setObservacoes(observacoes);
         }
-
         os = repository.save(os);
         return toResponseDTO(os);
     }
 
     @Override
-    @Transactional
-    public List<OsItemDTO> adicionarServicos(Long id, List<Long> servicosIds) {
+    public List<OsItemDTO> adicionarServicos(String id, List<Long> servicosIds) {
         log.info("Adicionando serviços à ordem de serviço ID: {}", id);
-
         OrdemServico os = getOrdemServico(id);
-
         if (os.getStatus() == StatusOrdemServico.AGUARDANDO_APROVACAO) {
             throw new BusinessException("Não é possível adicionar serviços em ordem aguardando aprovação");
         }
-
         List<OsItemDTO> servicos = new ArrayList<>();
         for (Long servicoId : servicosIds) {
             ServicoResponseDTO servico = servicoClient.getServico(servicoId);
@@ -303,41 +258,31 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
                 servicos.add(item);
             }
         }
-
         repository.save(os);
         return servicos;
     }
 
     @Override
-    @Transactional
-    public OrdemServicoResponseDTO removerServicos(Long id, List<Long> servicosIds) {
+    public OrdemServicoResponseDTO removerServicos(String id, List<Long> servicosIds) {
         log.info("Removendo serviços da ordem de serviço ID: {}", id);
-
         OrdemServico os = getOrdemServico(id);
-
         if (os.getStatus() == StatusOrdemServico.AGUARDANDO_APROVACAO) {
             throw new BusinessException("Não é possível remover serviços em ordem aguardando aprovação");
         }
-
         for (Long servicoId : servicosIds) {
             os.removeServico(servicoId);
         }
-
         os = repository.save(os);
         return toResponseDTO(os);
     }
 
     @Override
-    @Transactional
-    public List<OsItemDTO> adicionarProdutos(Long id, List<ItemOrdemServicoDTO> produtos) {
+    public List<OsItemDTO> adicionarProdutos(String id, List<ItemOrdemServicoDTO> produtos) {
         log.info("Adicionando produtos à ordem de serviço ID: {}", id);
-
         OrdemServico os = getOrdemServico(id);
-
         if (os.getStatus() == StatusOrdemServico.AGUARDANDO_APROVACAO) {
             throw new BusinessException("Não é possível adicionar produtos em ordem aguardando aprovação");
         }
-
         List<OsItemDTO> itens = new ArrayList<>();
         for (ItemOrdemServicoDTO produtoDTO : produtos) {
             ItemOrdemServico item = new ItemOrdemServico();
@@ -345,8 +290,6 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
             item.setQuantidade(produtoDTO.getQuantidade());
             item.setPrecoUnitario(produtoDTO.getPrecoUnitario());
             os.addProduto(item);
-
-            // Busca info do produto para retornar
             try {
                 var produto = produtoClient.getProduto(produtoDTO.getProdutoCatalogoId());
                 if (produto != null) {
@@ -361,50 +304,40 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
                 log.warn("Erro ao buscar produto ID: {}", produtoDTO.getProdutoCatalogoId(), e);
             }
         }
-
         repository.save(os);
         return itens;
     }
 
     @Override
-    @Transactional
-    public OrdemServicoResponseDTO removerProdutos(Long id, List<Long> produtosIds) {
+    public OrdemServicoResponseDTO removerProdutos(String id, List<Long> produtosIds) {
         log.info("Removendo produtos da ordem de serviço ID: {}", id);
-
         OrdemServico os = getOrdemServico(id);
-
         if (os.getStatus() == StatusOrdemServico.AGUARDANDO_APROVACAO) {
             throw new BusinessException("Não é possível remover produtos em ordem aguardando aprovação");
         }
-
         for (Long produtoId : produtosIds) {
             os.removeProduto(produtoId);
         }
-
         os = repository.save(os);
         return toResponseDTO(os);
     }
 
     @Override
-    @Transactional
-    public void deletar(Long id) {
+    public void deletar(String id) {
         log.info("Deletando ordem de serviço ID: {}", id);
         OrdemServico os = getOrdemServico(id);
         repository.delete(os);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public OrdemServico getOrdemServico(Long id) {
+    public OrdemServico getOrdemServico(String id) {
         return repository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Ordem de serviço não encontrada"));
     }
 
     @Override
-    @Transactional
-    public void adicionarOrcamento(Long ordemServicoId, Long orcamentoId, StatusOrdemServico status) {
+    public void adicionarOrcamento(String ordemServicoId, Long orcamentoId, StatusOrdemServico status) {
         log.info("Adicionando orçamento ID: {} à ordem de serviço ID: {}", orcamentoId, ordemServicoId);
-
         OrdemServico os = getOrdemServico(ordemServicoId);
         os.setOrcamentoId(orcamentoId);
         os.setStatus(status);
@@ -414,7 +347,10 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
     private OrdemServicoResponseDTO toResponseDTO(OrdemServico os) {
         OrdemServicoResponseDTO dto = mapper.toDTO(os);
 
-        // Busca informações complementares
+        // TEMPORÁRIO: Comentado enquanto outros serviços não estão rodando
+        // Descomentar quando testar no ambiente K8s com todos os serviços
+        
+        /*
         try {
             if (os.getClienteId() != null) {
                 ClienteResponseDTO cliente = clienteClient.getCliente(os.getClienteId());
@@ -448,7 +384,6 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
             log.warn("Erro ao buscar veículo ID: {}", os.getVeiculoId(), e);
         }
 
-        // Busca serviços
         if (os.getServicosIds() != null && !os.getServicosIds().isEmpty()) {
             List<ServicoResponseDTO> servicos = new ArrayList<>();
             for (Long servicoId : os.getServicosIds()) {
@@ -463,8 +398,8 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
             }
             dto.setServicos(servicos);
         }
+        */
 
-        // Converte itens de ordem de serviço
         if (os.getItensOrdemServico() != null && !os.getItensOrdemServico().isEmpty()) {
             List<ItemOrdemServicoDTO> itens = os.getItensOrdemServico().stream()
                     .map(item -> {
