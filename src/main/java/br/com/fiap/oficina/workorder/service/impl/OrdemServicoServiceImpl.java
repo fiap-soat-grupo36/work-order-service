@@ -45,9 +45,7 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
         log.info("Criando ordem de serviço para cliente ID: {} e veículo ID: {}",
                 request.getClienteId(), request.getVeiculoId());
 
-        // TEMPORÁRIO: Comentado para testar sem outros serviços rodando
-        // Descomentar quando testar no ambiente K8s com customer-service disponível
-        /*
+        // Valida cliente e veículo via Feign Client
         ClienteResponseDTO cliente = clienteClient.getCliente(request.getClienteId());
         VeiculoResponseDTO veiculo = veiculoClient.getVeiculo(request.getVeiculoId());
 
@@ -57,7 +55,6 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
         if (veiculo == null) {
             throw new RecursoNaoEncontradoException("Veículo não encontrado");
         }
-        */
 
         OrdemServico os = new OrdemServico();
         os.setClienteId(request.getClienteId());
@@ -67,18 +64,11 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
         os.setDataCriacao(LocalDateTime.now());
 
         if (request.getServicosIds() != null && !request.getServicosIds().isEmpty()) {
-            // TEMPORÁRIO: Comentado para testar sem catalog-service
-            /*
             for (Long servicoId : request.getServicosIds()) {
                 ServicoResponseDTO servico = servicoClient.getServico(servicoId);
                 if (servico != null && servico.getAtivo()) {
                     os.addServico(servicoId);
                 }
-            }
-            */
-            // Adiciona diretamente sem validar
-            for (Long servicoId : request.getServicosIds()) {
-                os.addServico(servicoId);
             }
         }
 
@@ -95,8 +85,9 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
             os = repository.save(os);
         }
 
-        // TODO: Ajustar evento para usar String id quando budget-service suportar
-        // eventPublisher.publishEvent(new CalcularOrcamentoEvent(this, os.getId()));
+        // Publica evento para calcular orçamento
+        // TODO: Ajustar budget-service para aceitar String id (ObjectId do MongoDB)
+        eventPublisher.publishEvent(new CalcularOrcamentoEvent(this, os.getId()));
 
         return toResponseDTO(os);
     }
@@ -183,8 +174,11 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
             os.setObservacoes(observacoes);
         }
         os = repository.save(os);
-        // TODO: Ajustar evento para usar String id
-        // eventPublisher.publishEvent(new CalcularOrcamentoEvent(this, os.getId()));
+        
+        // Publica evento para calcular orçamento
+        // TODO: Ajustar budget-service para aceitar String id (ObjectId do MongoDB)
+        eventPublisher.publishEvent(new CalcularOrcamentoEvent(this, os.getId()));
+        
         return toResponseDTO(os);
     }
 
@@ -347,10 +341,7 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
     private OrdemServicoResponseDTO toResponseDTO(OrdemServico os) {
         OrdemServicoResponseDTO dto = mapper.toDTO(os);
 
-        // TEMPORÁRIO: Comentado enquanto outros serviços não estão rodando
-        // Descomentar quando testar no ambiente K8s com todos os serviços
-        
-        /*
+        // Busca informações complementares via Feign Clients
         try {
             if (os.getClienteId() != null) {
                 ClienteResponseDTO cliente = clienteClient.getCliente(os.getClienteId());
@@ -398,7 +389,6 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
             }
             dto.setServicos(servicos);
         }
-        */
 
         if (os.getItensOrdemServico() != null && !os.getItensOrdemServico().isEmpty()) {
             List<ItemOrdemServicoDTO> itens = os.getItensOrdemServico().stream()
