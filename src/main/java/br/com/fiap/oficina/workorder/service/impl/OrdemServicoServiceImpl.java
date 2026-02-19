@@ -13,8 +13,9 @@ import br.com.fiap.oficina.workorder.dto.response.*;
 import br.com.fiap.oficina.workorder.entity.ItemOrdemServico;
 import br.com.fiap.oficina.workorder.entity.OrdemServico;
 import br.com.fiap.oficina.workorder.event.CalcularOrcamentoEvent;
-import br.com.fiap.oficina.workorder.event.VeiculoDisponivelEvent;
 import br.com.fiap.oficina.workorder.mapper.OrdemServicoMapper;
+import br.com.fiap.oficina.workorder.messaging.WorkOrderCreatedEventPublisher;
+import br.com.fiap.oficina.workorder.messaging.event.WorkOrderCreatedEvent;
 import br.com.fiap.oficina.workorder.repository.OrdemServicoRepository;
 import br.com.fiap.oficina.workorder.service.OrdemServicoService;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
     private final VeiculoClient veiculoClient;
     private final ServicoClient servicoClient;
     private final ProdutoCatalogoClient produtoClient;
+    private final WorkOrderCreatedEventPublisher workOrderCreatedEventPublisher;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
@@ -85,11 +87,14 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
             os = repository.save(os);
         }
 
+        OrdemServicoResponseDTO response = toResponseDTO(os);
+        workOrderCreatedEventPublisher.publish(buildWorkOrderCreatedEvent(response));
+
         // Publica evento para calcular orçamento
         // TODO: Ajustar budget-service para aceitar String id (ObjectId do MongoDB)
         eventPublisher.publishEvent(new CalcularOrcamentoEvent(this, os.getId()));
 
-        return toResponseDTO(os);
+        return response;
     }
 
     @Override
@@ -336,6 +341,61 @@ public class OrdemServicoServiceImpl implements OrdemServicoService {
         os.setOrcamentoId(orcamentoId);
         os.setStatus(status);
         repository.save(os);
+    }
+
+    private WorkOrderCreatedEvent buildWorkOrderCreatedEvent(OrdemServicoResponseDTO response) {
+        WorkOrderCreatedEvent.ClientData clientData = null;
+        if (response.getCliente() != null) {
+            clientData = new WorkOrderCreatedEvent.ClientData(
+                    response.getCliente().getId(),
+                    response.getCliente().getNome(),
+                    response.getCliente().getEmail(),
+                    response.getCliente().getTelefone()
+            );
+        }
+
+        WorkOrderCreatedEvent.VehicleData vehicleData = null;
+        if (response.getVeiculo() != null) {
+            vehicleData = new WorkOrderCreatedEvent.VehicleData(
+                    response.getVeiculo().getId(),
+                    response.getVeiculo().getPlaca(),
+                    response.getVeiculo().getMarca(),
+                    response.getVeiculo().getModelo(),
+                    response.getVeiculo().getAno()
+            );
+        }
+
+        List<WorkOrderCreatedEvent.ServiceData> serviceData = response.getServicos() == null
+                ? List.of()
+                : response.getServicos().stream()
+                .map(service -> new WorkOrderCreatedEvent.ServiceData(
+                        service.getId(),
+                        service.getNome(),
+                        service.getDescricao(),
+                        service.getPrecoBase()
+                ))
+                .collect(Collectors.toList());
+
+        List<WorkOrderCreatedEvent.ProductData> productData = response.getItensOrdemServico() == null
+                ? List.of()
+                : response.getItensOrdemServico().stream()
+                .map(product -> new WorkOrderCreatedEvent.ProductData(
+                        product.getProdutoCatalogoId(),
+                        product.getQuantidade(),
+                        product.getPrecoUnitario()
+                ))
+                .collect(Collectors.toList());
+
+        return new WorkOrderCreatedEvent(
+                response.getId(),
+                response.getStatus() == null ? null : response.getStatus().name(),
+                response.getDataCriacao(),
+                response.getObservacoes(),
+                clientData,
+                vehicleData,
+                serviceData,
+                productData
+        );
     }
 
     private OrdemServicoResponseDTO toResponseDTO(OrdemServico os) {

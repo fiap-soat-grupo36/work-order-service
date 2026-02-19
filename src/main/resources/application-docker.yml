@@ -3,6 +3,11 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://workorder_user:workorder_pass@mongodb:27017/workorder_db}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:oficina}
+    password: ${RABBITMQ_PASSWORD:oficina}
 
 eureka:
   client:
