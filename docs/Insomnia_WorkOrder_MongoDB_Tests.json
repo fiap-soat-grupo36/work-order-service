@@ -1,332 +1,507 @@
-type: collection.insomnia.rest/5.0
-schema_version: "5.1"
-name: Work Order MongoDB - Tests
-meta:
-  id: wrk_256364786ab040268c6c585da9e0891f
-  created: 1771499559753
-  modified: 1771499559753
-  description: ""
-collection:
-  - name: 1. Customer Service (PostgreSQL)
-    meta:
-      id: fld_7b69ccc57f25423fb275c403ee4470e8
-      created: 1771499559755
-      modified: 1771499666757
-      sortKey: -1771499559864
-      description: Serviços de cliente e veículo - PostgreSQL porta 8081
-    children:
-      - url: "{{ _.baseUrl }}:{{ _.customerPort }}/api/clientes"
-        name: Criar Cliente
-        meta:
-          id: req_d724c68438cc49b1a39b77d60eec677f
-          created: 1771499559756
-          modified: 1771499649230
-          isPrivate: false
-          description: Cria um novo cliente no PostgreSQL (customer-service)
-          sortKey: -1771499559808
-        method: POST
-        body:
-          mimeType: application/json
-          text: |-
-            {
-              "nome": "Carlos Mendes",
-              "email": "carlos.mendes@email.com",
-              "telefone": "11977665544",
-              "cpf": "12312312399",
-              "ativo": true
-            }
-        headers:
-          - name: Content-Type
-            value: application/json
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.baseUrl }}:{{ _.customerPort }}/api/clientes/3"
-        name: Buscar Cliente por ID
-        meta:
-          id: req_bc4058d44f4a495f9519982a54c3d4e7
-          created: 1771499559757
-          modified: 1771499644716
-          isPrivate: false
-          description: Busca Carlos Mendes (cliente recém criado)
-          sortKey: -1771499559858
-        method: GET
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.baseUrl }}:{{ _.customerPort }}/api/veiculos"
-        name: Criar Veículo
-        meta:
-          id: req_fd0b86aba4b146e79221e0d1e396f98f
-          created: 1771499559757
-          modified: 1771499660099
-          isPrivate: false
-          description: Cria veículo associado ao cliente ID 3 (Carlos Mendes)
-          sortKey: -1771499559758
-        method: POST
-        body:
-          mimeType: application/json
-          text: |-
-            {
-              "placa": "DEF4567",
-              "marca": "Chevrolet",
-              "modelo": "Onix",
-              "ano": 2024,
-              "cor": "Vermelho",
-              "clienteId": 3,
-              "ativo": true
-            }
-        headers:
-          - name: Content-Type
-            value: application/json
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.baseUrl }}:{{ _.customerPort }}/api/clientes/3"
-        name: Atualizar Telefone Cliente
-        meta:
-          id: req_6ddbeb9d2455484dae88545a6ab09305
-          created: 1771499559758
-          modified: 1771499559758
-          isPrivate: false
-          description: Atualiza telefone de 11977665544 para 11955554444 - para testar
-            dados em tempo real no MongoDB
-          sortKey: -1771499559758
-        method: PUT
-        body:
-          mimeType: application/json
-          text: |-
-            {
-              "nome": "Carlos Mendes",
-              "email": "carlos.mendes@email.com",
-              "telefone": "11955554444",
-              "cpf": "12312312399",
-              "ativo": true
-            }
-        headers:
-          - name: Content-Type
-            value: application/json
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.baseUrl }}:{{ _.customerPort }}/api/veiculos/3"
-        name: Buscar Veículo por ID
-        meta:
-          id: req_e3046c6b8877424689175bb0b62bf5b5
-          created: 1771499559758
-          modified: 1771499661890
-          isPrivate: false
-          description: Busca Chevrolet Onix (veículo recém criado)
-          sortKey: -1771499559783
-        method: GET
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-  - name: 2. Work Order Service (MongoDB)
-    meta:
-      id: fld_e10114b056944f46a965321e25bea5a3
-      created: 1771499559760
-      modified: 1771499676115
-      sortKey: -1771499559814
-      description: Ordens de Serviço - MongoDB porta 8087
-    children:
-      - url: "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico"
-        name: Listar Todas as OSs
-        meta:
-          id: req_1245bbd97a16490d868f322fa22dc1f3
-          created: 1771499559761
-          modified: 1771499559761
-          isPrivate: false
-          description: Lista todas as OSs do MongoDB com dados enriquecidos
-          sortKey: -1771499559761
-        method: GET
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico"
-        name: Criar Ordem de Serviço
-        meta:
-          id: req_1d8ee8ccbd024c87831328d9936267b6
-          created: 1771499559761
-          modified: 1771499559761
-          isPrivate: false
-          description: Cria OS no MongoDB validando Carlos Mendes + Chevrolet Onix via Feign
-          sortKey: -1771499559761
-        method: POST
-        body:
-          mimeType: application/json
-          text: >-
-            {
-              "clienteId": 3,
-              "veiculoId": 3,
-              "observacoes": "Revisao dos 10.000 km - Teste MongoDB + Feign Client"
-            }
-        headers:
-          - name: Content-Type
-            value: application/json
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.baseUrl }}:{{ _.workOrderPort
-          }}/api/ordens-servico/69963c0e67ed7e07c1cce2d7"
-        name: Buscar OS por ID (ObjectId)
-        meta:
-          id: req_404610dbf6d840e689b3a6f17bc4c881
-          created: 1771499559762
-          modified: 1771499559762
-          isPrivate: false
-          description: Busca OS específica usando String (ObjectId do MongoDB)
-          sortKey: -1771499559762
-        method: GET
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/por-cliente/3"
-        name: Buscar OSs por Cliente
-        meta:
-          id: req_2b564a33ba1749eb8f0ea9b7c0dee014
-          created: 1771499559763
-          modified: 1771499559763
-          isPrivate: false
-          description: Lista todas as OSs de Carlos Mendes
-          sortKey: -1771499559763
-        method: GET
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/por-veiculo/3"
-        name: Buscar OSs por Veículo
-        meta:
-          id: req_80d5150bfcf945f2813b5b517006cd40
-          created: 1771499559763
-          modified: 1771499559763
-          isPrivate: false
-          description: Lista todas as OSs do Chevrolet Onix
-          sortKey: -1771499559763
-        method: GET
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-  - name: 3. Testes de Integração
-    meta:
-      id: fld_facc537b44664743ac4f8e90ed15df02
-      created: 1771499559764
-      modified: 1771499559764
-      sortKey: -1771499559764
-      description: Cenários de teste completos
-    children:
-      - url: "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico"
-        name: "Teste: Dados em Tempo Real"
-        meta:
-          id: req_374cb2f156cc4169b069ae90ca79fdf4
-          created: 1771499559764
-          modified: 1771499559764
-          isPrivate: false
-          description: "TESTE: Execute após atualizar telefone do cliente - deve mostrar
-            telefone novo em todas as OSs"
-          sortKey: -1771499559764
-        method: GET
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-      - url: "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico"
-        name: "Teste: Validação Feign (Veículo Inválido)"
-        meta:
-          id: req_6d0eb5d5799a4b7c873c0cc04f10c469
-          created: 1771499559765
-          modified: 1771499559765
-          isPrivate: false
-          description: "TESTE: Deve retornar erro 404 - Veículo não encontrado via Feign"
-          sortKey: -1771499559765
-        method: POST
-        body:
-          mimeType: application/json
-          text: |-
-            {
-              "clienteId": 3,
-              "veiculoId": 999,
-              "observacoes": "Teste: deve falhar pois veículo 999 não existe"
-            }
-        headers:
-          - name: Content-Type
-            value: application/json
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
-cookieJar:
-  name: Default Jar
-  meta:
-    id: jar_63225b3cbdfbdc231a189f47c58419afb90be649
-    created: 1771499562769
-    modified: 1771499562769
-environments:
-  name: Base Environment
-  meta:
-    id: env_a19bb3e7d69245b0aa86abb7a143b325
-    created: 1771499559755
-    modified: 1771499559755
-    isPrivate: false
-  data:
-    baseUrl: http://localhost
-    customerPort: "8081"
-    workOrderPort: "8087"
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-02-19T10:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_mongodb_tests",
+      "_type": "workspace",
+      "name": "Work Order MongoDB - Tests",
+      "description": "Testes de integração MongoDB + Feign Client",
+      "parentId": null
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "name": "Base Environment",
+      "data": {
+        "baseUrl": "http://localhost",
+        "customerPort": "8081",
+        "workOrderPort": "8087"
+      },
+      "parentId": "wrk_mongodb_tests"
+    },
+    {
+      "_id": "fld_customer",
+      "_type": "request_group",
+      "name": "1. Customer Service (PostgreSQL)",
+      "description": "Serviços de cliente e veículo - PostgreSQL porta 8081",
+      "parentId": "wrk_mongodb_tests"
+    },
+    {
+      "_id": "req_create_cliente",
+      "_type": "request",
+      "name": "Criar Cliente",
+      "url": "{{ _.baseUrl }}:{{ _.customerPort }}/api/clientes",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Carlos Mendes\",\n  \"email\": \"carlos.mendes@email.com\",\n  \"telefone\": \"11977665544\",\n  \"cpf\": \"12312312399\",\n  \"ativo\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria um novo cliente no PostgreSQL (customer-service)",
+      "parentId": "fld_customer"
+    },
+    {
+      "_id": "req_get_cliente",
+      "_type": "request",
+      "name": "Buscar Cliente por ID",
+      "url": "{{ _.baseUrl }}:{{ _.customerPort }}/api/clientes/3",
+      "method": "GET",
+      "description": "Busca Carlos Mendes (cliente recém criado)",
+      "parentId": "fld_customer"
+    },
+    {
+      "_id": "req_create_veiculo",
+      "_type": "request",
+      "name": "Criar Veículo",
+      "url": "{{ _.baseUrl }}:{{ _.customerPort }}/api/veiculos",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"placa\": \"DEF4567\",\n  \"marca\": \"Chevrolet\",\n  \"modelo\": \"Onix\",\n  \"ano\": 2024,\n  \"cor\": \"Vermelho\",\n  \"clienteId\": 3,\n  \"ativo\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria veículo associado ao cliente ID 3 (Carlos Mendes)",
+      "parentId": "fld_customer"
+    },
+    {
+      "_id": "req_get_veiculo",
+      "_type": "request",
+      "name": "Buscar Veículo por ID",
+      "url": "{{ _.baseUrl }}:{{ _.customerPort }}/api/veiculos/3",
+      "method": "GET",
+      "description": "Busca Chevrolet Onix (veículo recém criado)",
+      "parentId": "fld_customer"
+    },
+    {
+      "_id": "req_update_cliente",
+      "_type": "request",
+      "name": "Atualizar Telefone Cliente",
+      "url": "{{ _.baseUrl }}:{{ _.customerPort }}/api/clientes/3",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"nome\": \"Carlos Mendes\",\n  \"email\": \"carlos.mendes@email.com\",\n  \"telefone\": \"11955554444\",\n  \"cpf\": \"12312312399\",\n  \"ativo\": true\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Atualiza telefone de 11977665544 para 11955554444 - para testar dados em tempo real no MongoDB",
+      "parentId": "fld_customer"
+    },
+    {
+      "_id": "fld_workorder",
+      "_type": "request_group",
+      "name": "2. Work Order Service (MongoDB)",
+      "description": "Ordens de Serviço - MongoDB porta 8087",
+      "parentId": "wrk_mongodb_tests"
+    },
+    {
+      "_id": "req_create_os",
+      "_type": "request",
+      "name": "Criar Ordem de Serviço",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"clienteId\": 3,\n  \"veiculoId\": 3,\n  \"observacoes\": \"Revisao dos 10.000 km - Teste MongoDB + Feign Client\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Cria OS no MongoDB validando Carlos Mendes + Chevrolet Onix via Feign",
+      "parentId": "fld_workorder"
+    },
+    {
+      "_id": "req_list_os",
+      "_type": "request",
+      "name": "Listar Todas as OSs",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico",
+      "method": "GET",
+      "description": "Lista todas as OSs do MongoDB com dados enriquecidos",
+      "parentId": "fld_workorder"
+    },
+    {
+      "_id": "req_get_os",
+      "_type": "request",
+      "name": "Buscar OS por ID (ObjectId)",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/69963c0e67ed7e07c1cce2d7",
+      "method": "GET",
+      "description": "Busca OS específica usando String (ObjectId do MongoDB)",
+      "parentId": "fld_workorder"
+    },
+    {
+      "_id": "req_get_os_cliente",
+      "_type": "request",
+      "name": "Buscar OSs por Cliente",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/por-cliente/3",
+      "method": "GET",
+      "description": "Lista todas as OSs de Carlos Mendes",
+      "parentId": "fld_workorder"
+    },
+    {
+      "_id": "req_get_os_veiculo",
+      "_type": "request",
+      "name": "Buscar OSs por Veículo",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/por-veiculo/3",
+      "method": "GET",
+      "description": "Lista todas as OSs do Chevrolet Onix",
+      "parentId": "fld_workorder"
+    },
+    {
+      "_id": "req_atribuir_mecanico",
+      "_type": "request",
+      "name": "Atribuir Mecânico à OS",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/OBJECTID_AQUI/atribuir-mecanico",
+      "method": "PUT",
+      "parameters": [
+        {
+          "name": "mecanicoId",
+          "value": "1"
+        }
+      ],
+      "description": "Atribui mecânico à OS (substitua OBJECTID_AQUI pelo ID real)",
+      "parentId": "fld_workorder"
+    },
+    {
+      "_id": "req_diagnosticar",
+      "_type": "request",
+      "name": "Diagnosticar OS",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/OBJECTID_AQUI/diagnosticar",
+      "method": "PUT",
+      "parameters": [
+        {
+          "name": "observacoes",
+          "value": "Diagnóstico realizado - necessário troca de óleo e filtros"
+        }
+      ],
+      "description": "Realiza diagnóstico e muda status para EM_DIAGNOSTICO (publica evento para Budget Service)",
+      "parentId": "fld_workorder"
+    },
+    {
+      "_id": "req_executar",
+      "_type": "request",
+      "name": "Executar OS",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/OBJECTID_AQUI/executar",
+      "method": "PUT",
+      "parameters": [
+        {
+          "name": "observacoes",
+          "value": "Iniciando execução dos serviços"
+        }
+      ],
+      "description": "Inicia execução e muda status para EM_EXECUCAO",
+      "parentId": "fld_workorder"
+    },
+    {
+      "_id": "req_finalizar",
+      "_type": "request",
+      "name": "Finalizar OS",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/OBJECTID_AQUI/finalizar",
+      "method": "PUT",
+      "parameters": [
+        {
+          "name": "observacoes",
+          "value": "Serviços concluídos com sucesso"
+        }
+      ],
+      "description": "Finaliza OS e muda status para FINALIZADA (publica evento VeiculoDisponivelEvent)",
+      "parentId": "fld_workorder"
+    },
+    {
+      "_id": "req_entregar",
+      "_type": "request",
+      "name": "Entregar OS",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/OBJECTID_AQUI/entregar",
+      "method": "PUT",
+      "parameters": [
+        {
+          "name": "observacoes",
+          "value": "Veículo entregue ao cliente"
+        }
+      ],
+      "description": "Registra entrega e muda status para ENTREGUE",
+      "parentId": "fld_workorder"
+    },
+    {
+      "_id": "fld_lifecycle",
+      "_type": "request_group",
+      "name": "2.1 Ciclo de Vida da OS",
+      "description": "Fluxo completo: RECEBIDA → EM_DIAGNOSTICO → EM_EXECUCAO → FINALIZADA → ENTREGUE",
+      "parentId": "wrk_mongodb_tests"
+    },
+    {
+      "_id": "req_lifecycle_note",
+      "_type": "request",
+      "name": "📝 Instruções: Ciclo de Vida",
+      "url": "http://localhost:8087/api/ordens-servico",
+      "method": "GET",
+      "description": "FLUXO COMPLETO:\n\n1. Criar OS (status: RECEBIDA)\n2. Atribuir Mecânico\n3. Diagnosticar (status: EM_DIAGNOSTICO)\n   → Publica evento CalcularOrcamentoEvent\n   → Budget Service criaria orçamento (AGUARDANDO_APROVACAO)\n4. Executar (status: EM_EXECUCAO)\n5. Finalizar (status: FINALIZADA)\n   → Publica evento VeiculoDisponivelEvent\n6. Entregar (status: ENTREGUE)\n\nOBS: Substitua OBJECTID_AQUI pelo ObjectId real retornado na criação da OS",
+      "parentId": "fld_lifecycle"
+    },
+    {
+      "_id": "fld_services_products",
+      "_type": "request_group",
+      "name": "2.2 Adicionar Serviços e Produtos",
+      "description": "Gerenciar itens da OS",
+      "parentId": "wrk_mongodb_tests"
+    },
+    {
+      "_id": "req_add_servicos",
+      "_type": "request",
+      "name": "Adicionar Serviços à OS",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/OBJECTID_AQUI/servicos",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "[1, 2]"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Adiciona serviços à OS (IDs do catalog-service). Ex: [1=Troca Óleo, 2=Alinhamento]",
+      "parentId": "fld_services_products"
+    },
+    {
+      "_id": "req_remove_servicos",
+      "_type": "request",
+      "name": "Remover Serviços da OS",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/OBJECTID_AQUI/servicos",
+      "method": "DELETE",
+      "body": {
+        "mimeType": "application/json",
+        "text": "[2]"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Remove serviços da OS",
+      "parentId": "fld_services_products"
+    },
+    {
+      "_id": "req_add_produtos",
+      "_type": "request",
+      "name": "Adicionar Produtos à OS",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/OBJECTID_AQUI/produtos",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "[\n  {\n    \"produtoCatalogoId\": 1,\n    \"quantidade\": 4,\n    \"precoUnitario\": 89.90\n  },\n  {\n    \"produtoCatalogoId\": 2,\n    \"quantidade\": 1,\n    \"precoUnitario\": 35.00\n  }\n]"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Adiciona produtos à OS (IDs do catalog-service)",
+      "parentId": "fld_services_products"
+    },
+    {
+      "_id": "req_remove_produtos",
+      "_type": "request",
+      "name": "Remover Produtos da OS",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/OBJECTID_AQUI/produtos",
+      "method": "DELETE",
+      "body": {
+        "mimeType": "application/json",
+        "text": "[1]"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Remove produtos da OS",
+      "parentId": "fld_services_products"
+    },
+    {
+      "_id": "fld_queries",
+      "_type": "request_group",
+      "name": "2.3 Consultas Avançadas",
+      "description": "Buscar OSs por diferentes critérios",
+      "parentId": "wrk_mongodb_tests"
+    },
+    {
+      "_id": "req_get_os_status",
+      "_type": "request",
+      "name": "Buscar OSs por Status",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico",
+      "method": "GET",
+      "parameters": [
+        {
+          "name": "status",
+          "value": "EM_EXECUCAO"
+        }
+      ],
+      "description": "Lista OSs com status específico (RECEBIDA, EM_DIAGNOSTICO, EM_EXECUCAO, FINALIZADA, ENTREGUE)",
+      "parentId": "fld_queries"
+    },
+    {
+      "_id": "req_get_os_aprovadas",
+      "_type": "request",
+      "name": "Listar OSs Aprovadas",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/aprovadas",
+      "method": "GET",
+      "description": "Lista apenas OSs aprovadas",
+      "parentId": "fld_queries"
+    },
+    {
+      "_id": "req_get_orcamento",
+      "_type": "request",
+      "name": "Buscar Orçamento da OS",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/OBJECTID_AQUI/orcamento",
+      "method": "GET",
+      "description": "Busca orçamento associado à OS (requer Budget Service)",
+      "parentId": "fld_queries"
+    },
+    {
+      "_id": "req_update_os",
+      "_type": "request",
+      "name": "Atualizar OS Completa",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/OBJECTID_AQUI",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"clienteId\": 3,\n  \"veiculoId\": 3,\n  \"observacoes\": \"Observações atualizadas - serviços adicionais necessários\",\n  \"servicosIds\": [1, 2, 3],\n  \"produtos\": [\n    {\n      \"produtoCatalogoId\": 1,\n      \"quantidade\": 5,\n      \"precoUnitario\": 89.90\n    }\n  ]\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "Atualiza dados completos da OS",
+      "parentId": "fld_queries"
+    },
+    {
+      "_id": "req_delete_os",
+      "_type": "request",
+      "name": "Deletar OS",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico/OBJECTID_AQUI",
+      "method": "DELETE",
+      "description": "Remove OS do sistema",
+      "parentId": "fld_queries"
+    },
+    {
+      "_id": "fld_tests",
+      "_type": "request_group",
+      "name": "3. Testes de Integração",
+      "description": "Cenários de teste completos",
+      "parentId": "wrk_mongodb_tests"
+    },
+    {
+      "_id": "req_test_realtime",
+      "_type": "request",
+      "name": "Teste: Dados em Tempo Real",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico",
+      "method": "GET",
+      "description": "TESTE: Execute após atualizar telefone do cliente - deve mostrar telefone novo em todas as OSs",
+      "parentId": "fld_tests"
+    },
+    {
+      "_id": "req_test_validation",
+      "_type": "request",
+      "name": "Teste: Validação Feign (Veículo Inválido)",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"clienteId\": 3,\n  \"veiculoId\": 999,\n  \"observacoes\": \"Teste: deve falhar pois veículo 999 não existe\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "TESTE: Deve retornar erro 404 - Veículo não encontrado via Feign",
+      "parentId": "fld_tests"
+    },
+    {
+      "_id": "req_test_validation_cliente",
+      "_type": "request",
+      "name": "Teste: Validação Feign (Cliente Inválido)",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"clienteId\": 999,\n  \"veiculoId\": 3,\n  \"observacoes\": \"Teste: deve falhar pois cliente 999 não existe\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "description": "TESTE: Deve retornar erro 404 - Cliente não encontrado via Feign",
+      "parentId": "fld_tests"
+    },
+    {
+      "_id": "req_test_lifecycle_complete",
+      "_type": "request",
+      "name": "Teste: Ciclo Completo",
+      "url": "{{ _.baseUrl }}:{{ _.workOrderPort }}/api/ordens-servico",
+      "method": "GET",
+      "description": "TESTE: Após executar todo o ciclo de vida, deve retornar OS com status ENTREGUE e todos os timestamps preenchidos",
+      "parentId": "fld_tests"
+    },
+    {
+      "_id": "fld_mongodb",
+      "_type": "request_group",
+      "name": "4. Verificação MongoDB",
+      "description": "Comandos para verificar dados no MongoDB Atlas",
+      "parentId": "wrk_mongodb_tests"
+    },
+    {
+      "_id": "req_mongo_note",
+      "_type": "request",
+      "name": "📝 Como verificar no MongoDB Atlas",
+      "url": "https://cloud.mongodb.com",
+      "method": "GET",
+      "description": "ACESSE:\n1. https://cloud.mongodb.com\n2. Cluster: oficina-workorder\n3. Database: workorder_db\n4. Collection: ordens_servico\n5. Verifique documentos salvos com _id (ObjectId)\n\nCAMPOS IMPORTANTES:\n- _id: ObjectId (String no Java)\n- status: RECEBIDA, EM_DIAGNOSTICO, EM_EXECUCAO, FINALIZADA, ENTREGUE\n- cliente_id: Referência (Long)\n- veiculo_id: Referência (Long)\n- data_criacao: Timestamp\n- data_inicio_execucao: Timestamp (após executar)\n- data_termino_execucao: Timestamp (após finalizar)\n- data_entrega: Timestamp (após entregar)\n- observacoes: String\n- itensOrdemServico: Array de subdocumentos",
+      "parentId": "fld_mongodb"
+    },
+    {
+      "_id": "fld_catalog_mock",
+      "_type": "request_group",
+      "name": "5. Catalog Service (Mock Data)",
+      "description": "Dados fictícios de serviços e produtos (caso não esteja rodando)",
+      "parentId": "wrk_mongodb_tests"
+    },
+    {
+      "_id": "req_catalog_note",
+      "_type": "request",
+      "name": "📝 Serviços e Produtos (IDs)",
+      "url": "http://localhost:8083",
+      "method": "GET",
+      "description": "SERVIÇOS (catalog-service):\n- ID 1: Troca de Óleo (R$ 150,00)\n- ID 2: Alinhamento e Balanceamento (R$ 120,00)\n- ID 3: Revisão dos Freios (R$ 200,00)\n- ID 4: Troca de Bateria (R$ 350,00)\n\nPRODUTOS (catalog-service):\n- ID 1: Óleo Sintético 5W30 (R$ 45,00)\n- ID 2: Filtro de Óleo (R$ 25,00)\n- ID 3: Pastilha de Freio (R$ 120,00)\n- ID 4: Bateria 60Ah (R$ 320,00)\n\nOBS: Se catalog-service NÃO estiver rodando, use apenas os IDs acima que já existem no banco.",
+      "parentId": "fld_catalog_mock"
+    }
+  ]
+}
