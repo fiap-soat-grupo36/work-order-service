@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: work-order-service-config
+data:
+  AWS_REGION: "us-east-1"
+  AWS_ENDPOINT_URL: "http://localstack.localstack.svc.cluster.local:4566"
