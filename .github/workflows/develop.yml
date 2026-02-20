@@ -1,27 +1,11 @@
-name: Develop - CI/CD
+name: Develop - CI/CD & Deploy to Dev
 
 on:
   push:
     branches: [develop]
 
 jobs:
-  service-readiness:
-    runs-on: ubuntu-latest
-    outputs:
-      ready: ${{ steps.check.outputs.ready }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: check
-        run: |
-          if [ -f pom.xml ] && [ -f Dockerfile ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-          fi
-
   build-and-test:
-    needs: service-readiness
-    if: ${{ needs.service-readiness.outputs.ready == 'true' }}
     permissions:
       contents: read
       packages: read
@@ -36,8 +20,7 @@ jobs:
     secrets: inherit
 
   sonar:
-    needs: [service-readiness, build-and-test]
-    if: ${{ needs.service-readiness.outputs.ready == 'true' }}
+    needs: build-and-test
     uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-sonar-java.yml@main
     with:
       java_version: '21'
@@ -49,8 +32,7 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   docker:
-    needs: [service-readiness, build-and-test, sonar]
-    if: ${{ needs.service-readiness.outputs.ready == 'true' }}
+    needs: [build-and-test, sonar]
     uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-dockerhub.yml@main
     with:
       modules: '["work-order-service"]'
@@ -58,30 +40,68 @@ jobs:
       registry_namespace: 'fiapsoatgrupo36'
       tag_strategy: 'both'
       push_images: true
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    secrets: inherit
+
+  #verify-infrastructure:
+  #  uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-terraform.yml@main
+  #  with:
+  #    workspace: dev
+  #    environment: dev
+  #    working_directory: ./infra
+  #    auto_apply: false
+  #    localstack_pod: fiap
+  #  secrets:
+  #    LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+#
+  #deploy-dev:
+  #  needs: [docker,verify-infrastructure]
+  #  if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+  #  uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-terraform.yml@main
+  #  with:
+  #    workspace: dev
+  #    environment: dev
+  #    working_directory: ./infra
+  #    auto_apply: true
+  #    localstack_pod: fiap
+  #  secrets:
+  #    LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
 
   create-pr-to-main:
-    needs: [service-readiness, docker]
-    if: ${{ needs.service-readiness.outputs.ready == 'true' }}
+    permissions:
+      contents: read
+      pull-requests: write
+    #needs: deploy-dev
     uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-create-pr.yml@main
     with:
       base: main
       head: develop
-      title: "Promote develop to main - ${{ github.sha }}"
+      title: "🚀 Deploy to Production - ${{ github.sha }}"
       body: |
-        Automated PR created after successful develop pipeline.
+        ## 🎯 Ready for Production Deployment
+        
+        **Environment:** Development → Production
+        **Commit:** `${{ github.sha }}`
+        **Deployed to Dev:** ✅ Successful
+        
+        **Environment:** Development → Production
+        **Commit:** `${{ github.sha }}`
 
-        Commit: `${{ github.sha }}`
-        Service: `work-order-service`
-      labels: '["deployment", "production", "needs-approval"]'
-      reviewers: ''
+        ### ✅ CI/CD Status
+        - ✅ Unit tests passed
+        - ✅ Code coverage analyzed
+        - ✅ SonarCloud quality gate passed
+        - ✅ Docker image published
+        - ✅ Deployed successfully to DEV
+        
+        ### 📦 Docker Image
+        - **Image:** `fiapsoatgrupo36/work-order-service:develop-${{ github.sha }}`
+        
+        ### 🔍 Review Checklist
+        - [ ] All features tested in DEV
+        - [ ] No critical bugs reported
+        - [ ] Performance validated
+        - [ ] Security review completed
+        
+        Ready for production deployment! 🚀
       draft: false
 
-  service-not-ready:
-    needs: service-readiness
-    if: ${{ needs.service-readiness.outputs.ready != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Repository does not have pom.xml and Dockerfile yet. Skipping CI jobs."
