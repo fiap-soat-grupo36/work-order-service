@@ -5,7 +5,6 @@ on:
     branches: [develop]
 
 jobs:
-  # 1. Build, Lint e Testes Unitários
   build-and-test:
     permissions:
       contents: read
@@ -20,20 +19,18 @@ jobs:
       jacoco_report_path: '**/target/site/jacoco/jacoco.xml'
     secrets: inherit
 
-  # 2. SonarCloud - Cobertura de Testes
   sonar:
     needs: build-and-test
     uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-sonar-java.yml@main
     with:
       java_version: '21'
       sonar_org: 'fiap-soat-grupo36'
-      sonar_project_key: 'work-order-service'
+      sonar_project_key: 'fiap-soat-grupo36_work-order-service'
       maven_skip_tests: true
       download_jacoco_artifacts: true
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  # 3. Docker Build & Push
   docker:
     needs: [build-and-test, sonar]
     uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-dockerhub.yml@main
@@ -43,33 +40,37 @@ jobs:
       registry_namespace: 'fiapsoatgrupo36'
       tag_strategy: 'both'
       push_images: true
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    secrets: inherit
 
-  # 4. Deploy to Dev Environment
-  deploy-dev:
-    needs: docker
-    uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-terraform.yml@main
-    with:
-      workspace: dev
-      environment: dev
-      working_directory: ./infra
-      auto_apply: true
-      tfvars_file: 'environments/dev.tfvars'
-      terraform_vars: |
-        {
-          "image_tag": "${{ github.ref_name }}-${{ github.sha }}",
-          "replicas": 1,
-          "environment": "dev"
-        }
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.DEV_AWS_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.DEV_AWS_SECRET_KEY }}
+  #verify-infrastructure:
+  #  uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-terraform.yml@main
+  #  with:
+  #    workspace: dev
+  #    environment: dev
+  #    working_directory: ./infra
+  #    auto_apply: false
+  #    localstack_pod: fiap
+  #  secrets:
+  #    LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+#
+  #deploy-dev:
+  #  needs: [docker,verify-infrastructure]
+  #  if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+  #  uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-terraform.yml@main
+  #  with:
+  #    workspace: dev
+  #    environment: dev
+  #    working_directory: ./infra
+  #    auto_apply: true
+  #    localstack_pod: fiap
+  #  secrets:
+  #    LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
 
-  # 5. Criar PR Automático para Main (Produção)
   create-pr-to-main:
-    needs: deploy-dev
+    permissions:
+      contents: read
+      pull-requests: write
+    #needs: deploy-dev
     uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-create-pr.yml@main
     with:
       base: main
@@ -82,8 +83,10 @@ jobs:
         **Commit:** `${{ github.sha }}`
         **Deployed to Dev:** ✅ Successful
         
+        **Environment:** Development → Production
+        **Commit:** `${{ github.sha }}`
+
         ### ✅ CI/CD Status
-        - ✅ Lint passed
         - ✅ Unit tests passed
         - ✅ Code coverage analyzed
         - ✅ SonarCloud quality gate passed
@@ -100,6 +103,5 @@ jobs:
         - [ ] Security review completed
         
         Ready for production deployment! 🚀
-      labels: '["deployment", "production", "needs-approval"]'
-      reviewers: ''
       draft: false
+

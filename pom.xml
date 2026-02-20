@@ -40,6 +40,20 @@
         </dependencies>
     </dependencyManagement>
 
+    <repositories>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages - shared-library</name>
+            <url>https://maven.pkg.github.com/fiap-soat-grupo36/shared-library</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.cloud</groupId>

@@ -5,7 +5,6 @@ on:
     branches: [main]
 
 jobs:
-  # 1. Build, Lint e Testes Unitários
   build-and-test:
     permissions:
       contents: read
@@ -20,20 +19,18 @@ jobs:
       jacoco_report_path: '**/target/site/jacoco/jacoco.xml'
     secrets: inherit
 
-  # 2. SonarCloud - Cobertura de Testes
   sonar:
     needs: build-and-test
     uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-sonar-java.yml@main
     with:
       java_version: '21'
       sonar_org: 'fiap-soat-grupo36'
-      sonar_project_key: 'work-order-service'
+      sonar_project_key: 'fiap-soat-grupo36_work-order-service'
       maven_skip_tests: true
       download_jacoco_artifacts: true
     secrets:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  # 3. Docker Build & Push
   docker:
     needs: [build-and-test, sonar]
     uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-dockerhub.yml@main
@@ -44,24 +41,28 @@ jobs:
       tag_strategy: 'custom'
       custom_tags: '["latest", "stable", "${{ github.sha }}"]'
       push_images: true
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    secrets: inherit
 
-  # 4. Deploy to Production
-  deploy-production:
-    needs: docker
-    uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-terraform.yml@main
-    with:
-      workspace: production
-      environment: prod
-      working_directory: ./infra
-      auto_apply: true
-      tfvars_file: 'environments/prod.tfvars'
-      terraform_vars: |
-        {
-          "environment": "prod"
-        }
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_KEY }}
+  #verify-infrastructure:
+  #  uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-terraform.yml@main
+  #  with:
+  #    workspace: prod
+  #    environment: prod
+  #    working_directory: ./infra
+  #    auto_apply: false
+  #    localstack_pod: fiap
+  #  secrets:
+  #    LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+#
+  #deploy-production:
+  #  needs: [docker,verify-infrastructure]
+  #  if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #  uses: fiap-soat-grupo36/reusable-actions/.github/workflows/_reusable-terraform.yml@main
+  #  with:
+  #    workspace: prod
+  #    environment: prod
+  #    working_directory: ./infra
+  #    auto_apply: true
+  #    localstack_pod: fiap
+  #  secrets:
+  #    LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
